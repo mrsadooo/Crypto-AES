@@ -34,19 +34,19 @@ for i in "${!file_sizes[@]}"; do
     dd if=/dev/urandom of=${of} bs=${bs} count=${count} >& /dev/null
 done
 
-#echo "Symmetric encryption"
-#for i in "${!file_sizes[@]}"; do
-#    size=${file_sizes[i]};
-#    in=${dir}${size}
-#    enc=${in}.des.enc
-#    dec=${in}.des.dec
-#
-#    echo "Encrypting file ${in} to ${enc}"
-#    time openssl enc -des -in ${in} -out ${enc} -pass pass:${pass}
-#
-#    echo "Decrypting file ${enc} to ${dec}"
-#    time openssl enc -des -d -in ${enc} -out ${dec} -pass pass:${pass}
-#done
+echo "Symmetric encryption"
+for i in "${!file_sizes[@]}"; do
+    size=${file_sizes[i]};
+    in=${dir}${size}
+    enc=${in}.des.enc
+    dec=${in}.des.dec
+
+    echo "Encrypting file ${in} to ${enc}"
+    time openssl enc -des -in ${in} -out ${enc} -pass pass:${pass}
+
+    echo "Decrypting file ${enc} to ${dec}"
+    time openssl enc -des -d -in ${enc} -out ${dec} -pass pass:${pass}
+done
 
 echo "RSA encryption"
 for k in "${!key_sizes[@]}"; do
@@ -67,12 +67,16 @@ for k in "${!key_sizes[@]}"; do
         echo "Encrypting file ${in} to ${enc}"
 
         openssl rand -base64 32 > ${bin}
-        openssl rsautl -encrypt -inkey ${public} -pubin -in ${bin} -out ${bin_enc}
-        openssl enc -des -salt -in ${in} -out ${enc} -pass file:${bin}
+        time (
+          openssl rsautl -encrypt -inkey ${public} -pubin -in ${bin} -out ${bin_enc} &&
+          openssl enc -des -salt -in ${in} -out ${enc} -pass file:${bin}
+        )
 
         echo "Decrypting file ${enc} to ${dec}"
-        openssl rsautl -decrypt -inkey ${private} -in ${bin_enc} -out ${bin_dec} -passin pass:${pass}
-        openssl enc -d -des -in ${enc} -out ${dec} -pass file:${bin}
+        time (
+          openssl rsautl -decrypt -inkey ${private} -in ${bin_enc} -out ${bin_dec} -passin pass:${pass} &&
+          openssl enc -d -des -in ${enc} -out ${dec} -pass file:${bin}
+        )
     done
 done
 
